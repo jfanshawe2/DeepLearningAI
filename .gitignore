@@ -1,0 +1,35 @@
+# Course material (not part of the deliverable)
+Final Project Deliverables.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+*.key
+
+# Data (keep the README that explains how to obtain it)
+data/*
+!data/README.md
+
+# Model artifacts and large files
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.gguf
+*.bin
+wandb/
+runs/
+lightning_logs/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
