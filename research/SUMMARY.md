@@ -10,6 +10,7 @@ Collated from six reports (A–F) in this folder, written 2026-10-01. Each claim
 | [D](D_dl_for_lob_and_market_making.md) | DL for limit order books, critiques, candidate papers |
 | [E](E_data_and_simulation.md) | L2/L3 data sources, simulators, queue and latency models |
 | [F](F_llms_in_trading_and_latency.md) | LLM trading agents, LLM latency, GPU prices, distilling Ollama models |
+| [G](G_free_hft_data.md) | Free HFT data (added 2026-10-10; supersedes parts of E) |
 
 ## 1. The problem, in one paragraph
 
@@ -42,7 +43,8 @@ Market-making quote/cancel decisions have to land within microseconds, because s
 - **The gap:** no paper found that distils a large LOB network into a small one. Close neighbours: Fu et al. (AAAI 2026, LLM teacher into small students for market making), Hedges 2026 (inference-compute frontier on FI-2010), distillation for volume prediction (2208.07232), and TIPS (2603.16985). C and D reached the same conclusion independently, but it rests on search coverage, not proof, so the claim needs hedging ("to our search") and a closer look at Fu et al. and Hedges.
 - **Honest risk:** if simple models already match deep ones at short horizons, the "teacher edge" may be small and the finding may be "distillation closes a small gap for free" or "the teacher was never much better". D frames this as a legitimate result.
 
-### Data and simulation (E)
+### Data and simulation (E, G)
+- **Update (G, 2026-10-10):** Nasdaq hosts free full-day TotalView-ITCH 5.0 (true L3) files at emi.nasdaq.com, including a consecutive week (Dec 8–12, 2025). That replaces paid equity L3 as the primary dataset. Also, Coinbase's `full`/`level3` channels now require authentication (free API key). See G.
 - **Plan:** record Coinbase L3 yourself (free, forward-only, true FIFO queue reconstruction); use Databento's $125 free credits for a few days of ES or SPY MBO (Standard plan $199/month); use FI-2010 and LOBSTER samples for benchmarking; backtest with **hftbacktest**.
 - **hftbacktest** supports separate feed and order latency, RiskAverse / probabilistic / L3-FIFO queue models, and both L2 and L3 data (verified from docs). It cannot model your own market impact, so keep order size small.
 - **Method:** sweep latency (0.1 / 1 / 10 / 50 ms or the µs equivalent), add the measured compute time of teacher and student, and report markouts at several horizons, fill and cancel-before-fill rates, and PnL at several fee levels.
