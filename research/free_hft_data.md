@@ -9,7 +9,13 @@ Background detail is in [G](G_free_hft_data.md). The training, loss and simulati
 
 ---
 
-## 0. Chosen data plan (decided 2026-10-11)
+> **Update 2026-11-03: plan changed.** We use the free Nasdaq ITCH files (§2) for Dec 8–12 2025 instead of
+> buying Databento MBO, with QQQ, PYPL and NVDA (selection in `results/data/`). Our own parser replaces the
+> hftbacktest Databento converter. Finding: for most mid/high-priced stocks the Nasdaq-only displayed book
+> is far wider than the consolidated market (ADBE median 12 ticks, COST 24), so only names whose Nasdaq
+> spread is usually one tick are used. §0 and §5 below are kept for the record.
+
+## 0. Chosen data plan (decided 2026-10-11, superseded)
 
 **Primary dataset: QQQ MBO (order-by-order) from Databento `XNAS.ITCH`, paid for with the free student credits.**
 
