@@ -1,0 +1,11 @@
+numpy>=2.0
+pandas>=2.2
+polars>=1.0
+pyarrow>=15
+numba>=0.60
+scipy>=1.12
+scikit-learn>=1.5
+lightgbm>=4.0
+matplotlib>=3.8
+torch>=2.3
+hftbacktest>=2.0   # trading evaluation (later stage)
