@@ -30,7 +30,7 @@ SIZES = {"small": [64, 32], "large": [512, 512, 256]}
 
 
 class MLP(nn.Module):
-    def __init__(self, n_in, hidden, n_sym, emb=4, dropout=0.0):
+    def __init__(self, n_in, hidden, n_sym, emb=4, dropout=0.0, n_out=3):
         super().__init__()
         self.emb = nn.Embedding(n_sym, emb)
         layers, d = [], n_in + emb
@@ -39,7 +39,7 @@ class MLP(nn.Module):
             if dropout:
                 layers.append(nn.Dropout(dropout))
             d = h
-        layers.append(nn.Linear(d, 3))
+        layers.append(nn.Linear(d, n_out))
         self.net = nn.Sequential(*layers)
 
     def forward(self, x, s):
@@ -84,9 +84,9 @@ def latency_us(model, n_in, n=3000):
     return dict(p50=float(np.percentile(t, 50) / 1e3), p99=float(np.percentile(t, 99) / 1e3))
 
 
-def train(size, tr, va, n_in, n_sym, device, epochs, lr, bs, seed=0):
+def train(size, tr, va, n_in, n_sym, device, epochs, lr, bs, seed=0, n_out=3, verbose=True):
     torch.manual_seed(seed)
-    model = MLP(n_in, SIZES[size], n_sym, dropout=0.1 if size == "large" else 0.0).to(device)
+    model = MLP(n_in, SIZES[size], n_sym, dropout=0.1 if size == "large" else 0.0, n_out=n_out).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, epochs)
     lossf = nn.CrossEntropyLoss()
@@ -107,7 +107,8 @@ def train(size, tr, va, n_in, n_sym, device, epochs, lr, bs, seed=0):
         sched.step()
         vl = eval_loss(model, *va, device)
         hist.append(dict(epoch=ep, train_loss=tot / len(perm), val_loss=vl, seconds=time.time() - t0))
-        print(f"    {size} ep{ep}: train {tot / len(perm):.4f} val {vl:.4f} ({time.time() - t0:.0f}s)", flush=True)
+        if verbose:
+            print(f"    {size} ep{ep}: train {tot / len(perm):.4f} val {vl:.4f} ({time.time() - t0:.0f}s)", flush=True)
         if vl < best - 1e-4:
             best, bad = vl, 0
             best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}

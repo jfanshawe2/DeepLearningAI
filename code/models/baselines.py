@@ -20,7 +20,6 @@ import sys
 import time
 from pathlib import Path
 
-import lightgbm as lgb
 import numpy as np
 import polars as pl
 from scipy.stats import spearmanr
@@ -68,6 +67,7 @@ def ic(y, pred, sym):
 
 
 def run(h, tr, va, te, cols, stride):
+    import lightgbm as lgb  # lazy: torch and lightgbm bundle clashing libomp copies on macOS
     ycol, dcol = f"y_{h}", f"dm_{h}"
     tr, va, te = (d.filter(pl.col(ycol) >= 0) for d in (tr, va, te))
     tr_s = tr.gather_every(stride)  # consecutive 100 ms rows are almost identical; thin for the linear fits
