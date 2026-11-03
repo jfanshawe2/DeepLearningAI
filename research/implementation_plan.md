@@ -66,6 +66,9 @@ our best bid/offer against an independent source for one day.
 
 ## 3. Prediction task
 
+- **Update 2026-11-03: main target is now event-time.** Rows at every best bid/ask change, label = direction
+  of the next mid change (see `results/event_time_results.md`: accuracy 0.66 vs ~0.53 directional on the
+  1 s grid label). The 100 ms grid below is kept as the comparison setup.
 - **Decision grid:** every 100 ms (~228k rows per stock per day).
 - **Label:** mid-price change over h ∈ {1 s, 5 s, 10 s} (h = 10, 50, 100 steps): down / flat / up, plus the
   raw change in ticks for regression. **No smoothed labels**: DeepLOB/FI-2010-style smoothed means leak future
@@ -105,6 +108,13 @@ Training runs locally on the M1 Max (Apple GPU via PyTorch MPS). Estimated: stud
 | D2 | Regression KD | teacher's predicted mid change (smoothed estimate of E[Δmid \| s]) |
 | D5 | Teacher-labelled extra data ([Born-Again Nets](https://arxiv.org/abs/1805.04770)) | teacher labels on extra symbols / days with no extra cost |
 | D6 | **Latency-matched teacher (ours)** | teacher trained to predict the move from t+L to t+L+h using features at t, i.e. the target the student faces when it acts L later |
+
+**Teacher and student get the same information (decided 2026-11-03).** The teacher's edge must come from
+capacity, not from seeing more: both see the last N book updates; the teacher processes the full raw window,
+the student a few summary features of the same window that it can compute in ~1 µs. Cheap extra inputs
+(e.g. cross-asset lead–lag) go to both. D4 (privileged information) is only a labelled side ablation, since
+we have no data that is genuinely unusable in time. If the teacher does not beat the student, that is the
+result (equal accuracy at far lower latency). Details: `results/event_time_results.md`.
 
 **Why distillation can help:** a single realised mid move is mostly noise; the teacher's output is a smoother
 target. Ablations: student direct vs D1 vs D2 vs D2+D5 vs D2+D5+D6, against LightGBM at matched latency.

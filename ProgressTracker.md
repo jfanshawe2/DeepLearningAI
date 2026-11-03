@@ -17,3 +17,10 @@
 - NN: MLP small (4.5k params) and large (413k) on the same features; all models tie (1 s macro-F1 0.53-0.54),
   large MLP overfits after 1-2 epochs -> gate 1 fails on this label; write-up in results/baseline_results.md.
   Next: event-time (next mid change) label, DeepLOB on FI-2010
+- event-time target (direction of next mid change, rows at best bid/ask updates): accuracy 0.66 (LightGBM),
+  0.657 (MLP), 0.638 (logistic) vs 0.626 for a one-feature rule; old 1 s target flat at ~0.53 macro-F1.
+- learning curve 1->3 training days: +0.2-0.4 pts on the new target, nothing on the old -> target matters far
+  more than data; model size still irrelevant. Fixed a macOS crash (torch + lightgbm libomp clash in one process).
+- design decision: teacher and student get the same information (teacher = raw event window, student = summary
+  features of the same window); cross-asset features go to both; privileged-info teacher only as a side ablation.
+  Next: DeepLOB on FI-2010, DeepLOB on event-time ITCH, cross-asset features for all models, distillation, latency

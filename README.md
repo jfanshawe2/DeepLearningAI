@@ -34,8 +34,8 @@ TODO: link to deployed demo and setup steps, if any.
 | `LICENSE` | MIT License |
 | `.gitignore` | Files ignored by Git |
 | `code/data/` | ITCH download, parser, order-book rebuild, features (`download_itch.py`, `itch_parse.py`, `book.py`, `features.py`, `select_symbols.py`) |
-| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`); DeepLOB and distillation to follow |
-| `code/analysis/` | Figures (`plot_baselines.py`) |
+| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve on both targets (`learning_curve.py`); DeepLOB and distillation to follow |
+| `code/analysis/` | Figures (`plot_baselines.py`, `plot_learning_curve.py`) |
 | `research/` | Literature notes and the implementation plan |
 | `Propsoal.md` | Initial project proposal (superseded by `research/implementation_plan.md`) |
 | `ProgressTracker.md` | Dated progress log |
@@ -75,8 +75,15 @@ python code/models/baselines.py                            # linear + LightGBM b
 ![Baseline comparison](results/baseline_comparison.png)
 
 All learned models tie, and the large MLP is never better than the small one. Most of the gain is in predicting
-*whether* the mid moves, not its direction (directional accuracy 0.53 at 1 s). Next: an event-time label and the
-DeepLOB raw-book teacher.
+*whether* the mid moves, not its direction (directional accuracy 0.53 at 1 s).
+
+**Event-time target (2026-11-03).** Predicting the direction of the *next* mid change, sampled at every best
+bid/ask update, lifts test accuracy to 0.66 (LightGBM 0.663, MLP 0.657, logistic 0.638, one-feature
+queue-imbalance rule 0.626). Training on 1 → 3 days adds only 0.2–0.4 points. Model size still makes no
+difference. The next mid change arrives a median 2–26 ms later for QQQ and NVDA, so latency matters directly.
+Write-up: [results/event_time_results.md](results/event_time_results.md).
+
+![Learning curve](results/learning_curve.png)
 
 ## 8. Conclusion
 
