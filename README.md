@@ -1,4 +1,4 @@
-# [Project Title TBD]
+# Fast Enough to Matter: Distilling Order-Book Models for Low-Latency Market Making
 
 STAT UN3108: Applied Deep Learning and AI, Columbia University, Fall 2026
 
@@ -6,10 +6,10 @@ STAT UN3108: Applied Deep Learning and AI, Columbia University, Fall 2026
 
 ## 1. Introduction
 
-This repository re-implements / investigates *[selected paper TBD]*. Our working idea (see `Propsoal.md`) is to test whether distillation-style fine-tuning improves small models in a simulated financial trading environment, compared with a frozen model with no weight updates.
+This repository re-implements DeepLOB and investigates whether its predictive edge survives the latency constraints of market making. Large order-book models are too slow to act on at the speed quotes must be updated; we distil them into a small, cache-sized student and measure how much predictive value and simulated PnL each model keeps once its own inference latency is charged.
 
-- **Selected paper:** TODO (title, authors, venue, year)
-- **Main contribution of the paper:** TODO
+- **Selected paper:** Z. Zhang, S. Zohren, S. Roberts, *DeepLOB: Deep Convolutional Neural Networks for Limit Order Books*, IEEE Transactions on Signal Processing, 2019 ([arXiv 1808.03668](https://arxiv.org/abs/1808.03668)).
+- **Main contribution of the paper:** a CNN + inception + LSTM network that learns features directly from raw limit-order-book snapshots and predicts mid-price direction, beating hand-crafted-feature models on the FI-2010 benchmark and transferring to unseen LSE stocks.
 
 ## 2. Live Demo (optional)
 
@@ -17,9 +17,9 @@ TODO: link to deployed demo and setup steps, if any.
 
 ## 3. Chosen Result
 
-- **Result targeted for reproduction:** TODO
-- **Why it matters:** TODO
-- **Reference in original paper:** TODO (Figure / Table / Equation)
+- **Result targeted for reproduction:** DeepLOB accuracy and macro-F1 on FI-2010 for prediction horizons k = 10, 50, 100.
+- **Why it matters:** it is the paper's headline evidence that a deep model on raw book data beats feature-based models; our extension asks whether that advantage still holds on recent Nasdaq data, against strong tree baselines, and after latency is charged.
+- **Reference in original paper:** FI-2010 results table (TODO: confirm table number from the paper).
 
 ## 4. GitHub Contents
 
@@ -33,30 +33,50 @@ TODO: link to deployed demo and setup steps, if any.
 | `report/` | PDF of the final two-page report |
 | `LICENSE` | MIT License |
 | `.gitignore` | Files ignored by Git |
-| `Propsoal.md` | Initial project proposal |
+| `code/data/` | ITCH download, parser, order-book rebuild, features (`download_itch.py`, `itch_parse.py`, `book.py`, `features.py`, `select_symbols.py`) |
+| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`); DeepLOB and distillation to follow |
+| `code/analysis/` | Figures (`plot_baselines.py`) |
+| `research/` | Literature notes and the implementation plan |
+| `Propsoal.md` | Initial project proposal (superseded by `research/implementation_plan.md`) |
 | `ProgressTracker.md` | Dated progress log |
 
 ## 5. Re-implementation Details
 
-- **Approach:** TODO
-- **Models:** TODO
-- **Datasets:** TODO
-- **Evaluation metrics:** TODO (e.g., accuracy, Sharpe ratio, trading-rule performance)
-- **Challenges / modifications to the original:** TODO
+- **Approach:** reproduce DeepLOB on FI-2010; rebuild the full Nasdaq order book from raw ITCH messages, sample it every 100 ms, and predict mid-price direction 1 s / 5 s / 10 s ahead with one model pooled across stocks; distil large teachers into a small student; evaluate in hftbacktest with latency and queue-position scenarios.
+- **Models:** logistic regression and LightGBM baselines; large MLP and DeepLOB teachers; ~2-10k-parameter MLP student (direct vs distilled).
+- **Datasets:** FI-2010; free Nasdaq TotalView-ITCH 5.0 files for Dec 8-12 2025 (QQQ + two mid-liquidity stocks). See `data/README.md`.
+- **Evaluation metrics:** accuracy, macro-F1, information coefficient; measured inference latency (p50/p99); simulated PnL vs latency.
+- **Challenges / modifications to the original:** unsmoothed labels (smoothed FI-2010-style labels leak future prices); chronological day-level splits; latency charged per model.
 
 ## 6. Reproduction Steps
 
 ```bash
-# TODO: environment setup, dependencies, and run commands
-git clone <repo-url>
-cd DeepLearningAIProjet
+git clone <repo-url> && cd DeepLearningAIProjet
+pip install -r requirements.txt
+export HFT_DATA_DIR=/path/to/external/drive/hft_data      # ~50 GB free needed for the raw week
+bash code/run_pipeline.sh                                  # download, parse, rebuild books, features
+python code/models/baselines.py                            # linear + LightGBM baselines -> results/baselines/
 ```
 
-- **Compute requirements:** TODO (GPU type / memory, approximate runtime)
+- **Compute requirements:** any recent laptop. Developed on an Apple M1 Max (64 GB RAM). Parsing is ~5 min per day; baselines take minutes; DeepLOB training ~2-4 h on the Apple GPU.
 
 ## 7. Results / Insights
 
-TODO: compare results with the original paper and state the expected end result for users.
+**Baselines (2026-11-03)**, pooled over QQQ, PYPL and NVDA, test day Dec 12 2025. Full write-up: [results/baseline_results.md](results/baseline_results.md).
+
+| Horizon | Majority class | Logistic | LightGBM | MLP small (4.5k) | MLP large (413k) |
+|---|---|---|---|---|---|
+| 1 s | 0.18 | 0.53 | 0.54 | 0.53 | 0.53 |
+| 5 s | 0.20 | 0.47 | 0.48 | 0.47 | 0.46 |
+| 10 s | 0.21 | 0.43 | 0.42 | 0.42 | 0.40 |
+
+*(macro-F1, down / flat / up)*
+
+![Baseline comparison](results/baseline_comparison.png)
+
+All learned models tie, and the large MLP is never better than the small one. Most of the gain is in predicting
+*whether* the mid moves, not its direction (directional accuracy 0.53 at 1 s). Next: an event-time label and the
+DeepLOB raw-book teacher.
 
 ## 8. Conclusion
 
