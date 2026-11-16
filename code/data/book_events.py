@@ -4,7 +4,7 @@ Input  $HFT_DATA_DIR/itch_events/<day>/<SYM>.parquet
 Output $HFT_DATA_DIR/book_events/<day>/<SYM>.parquet, regular session only:
 
     ts                       event time (ns since midnight ET); several events can share a timestamp
-    bp1..bp5, bs1..bs5       bid prices (cents) / sizes after the event
+    bp1..bp10, bs1..bs10     bid prices (cents) / sizes after the event (10 levels; DeepLOB input)
     ap1..ap5, as1..as5       ask prices / sizes
     cum_buy, cum_sell        cumulative aggressor volume since the open (same signing as book.py)
     cum_trades, cum_events   cumulative trade count and order-event count since the open
@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # noqa: E402
 from data.book import A, C, D, E, F, P, U, X, _add, _remove  # noqa: E402
 
-NLEV = 5
+NLEV = 10  # 10 levels for DeepLOB input (features_event.py uses the first 5)
 
 
 @nb.njit(cache=True)
