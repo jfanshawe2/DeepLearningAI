@@ -6,7 +6,12 @@ STAT UN3108: Applied Deep Learning and AI, Columbia University, Fall 2026
 
 ## 1. Introduction
 
-This repository re-implements DeepLOB and investigates whether its predictive edge survives the latency constraints of market making. Large order-book models are too slow to act on at the speed quotes must be updated; we distil them into a small, cache-sized student and measure how much predictive value and simulated PnL each model keeps once its own inference latency is charged.
+This repository reproduces DeepLOB and asks whether its predictive edge survives the latency constraints of market making.
+
+- **Setting:** a software market maker on a CPU server near the exchange: no FPGA, and no GPU on the decision path (one-at-a-time GPU inference is measurably slower than CPU). It predicts the direction of the next mid-price change on Nasdaq and pulls the quote that is about to be run over.
+- **The tension:** on our Nasdaq data the next mid change arrives a median 2-26 ms after a book update (QQQ, NVDA). DeepLOB takes ~2 ms per prediction on one CPU thread (the paper's 0.253 ms is a batched GPU figure); a 4.6k-parameter MLP student takes ~0.01 ms.
+- **The question:** how much of each model's edge is left once its own inference time is charged, and can a fast student distilled from a slow teacher keep it?
+- **The answer depends on the competitive environment.** Speed only matters relative to whoever else is racing for the same price change, so results are reported as curves against total latency (own infrastructure + model), with and without a faster rival, rather than as one profit number. Readers place themselves on the curve (FPGA shop, co-located software, nearby data centre, retail).
 
 - **Selected paper:** Z. Zhang, S. Zohren, S. Roberts, *DeepLOB: Deep Convolutional Neural Networks for Limit Order Books*, IEEE Transactions on Signal Processing, 2019 ([arXiv 1808.03668](https://arxiv.org/abs/1808.03668)).
 - **Main contribution of the paper:** a CNN + inception + LSTM network that learns features directly from raw limit-order-book snapshots and predicts mid-price direction, beating hand-crafted-feature models on the FI-2010 benchmark and transferring to unseen LSE stocks.
@@ -35,7 +40,9 @@ TODO: link to deployed demo and setup steps, if any.
 | `.gitignore` | Files ignored by Git |
 | `code/data/` | ITCH download, parser, order-book rebuild, features (`download_itch.py`, `itch_parse.py`, `book.py`, `features.py`, `select_symbols.py`) |
 | `deeplob_reproduction/` | **DeepLOB reproduction on FI-2010** (paper Table II): model, training script, results, figure, own README |
-| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve on both targets (`learning_curve.py`), batch-1 latency (`latency.py`); distillation to follow |
+| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve (`learning_curve.py`), batch-1 latency (`latency.py`), DeepLOB on Nasdaq (`train_deeplob_itch.py`), saved test predictions (`save_predictions.py`); distillation to follow |
+| `code/sim/` | Latency-aware market-making simulator (`latency_sim.py`) |
+| `code/run_overnight.sh` | Low-priority queue for the long GPU runs |
 | `code/analysis/` | Figures (`plot_baselines.py`, `plot_learning_curve.py`) |
 | `research/` | Literature notes and the implementation plan |
 | `Propsoal.md` | Initial project proposal (superseded by `research/implementation_plan.md`) |
@@ -43,10 +50,11 @@ TODO: link to deployed demo and setup steps, if any.
 
 ## 5. Re-implementation Details
 
-- **Approach:** reproduce DeepLOB on FI-2010; rebuild the full Nasdaq order book from raw ITCH messages, sample it every 100 ms, and predict mid-price direction 1 s / 5 s / 10 s ahead with one model pooled across stocks; distil large teachers into a small student; evaluate in hftbacktest with latency and queue-position scenarios.
-- **Models:** logistic regression and LightGBM baselines; large MLP and DeepLOB teachers; ~2-10k-parameter MLP student (direct vs distilled).
+- **Approach:** (1) reproduce DeepLOB on FI-2010 (done, `deeplob_reproduction/`); (2) rebuild the full Nasdaq order book from raw ITCH messages and predict the direction of the next mid change at every best bid/ask update, one model pooled across stocks (the first 100 ms / 1-10 s grid target carried almost no signal); (3) train DeepLOB on the raw 100-update window as the slow teacher; (4) distil it into a small student; (5) measure every model's batch-1 latency; (6) charge that latency in a simple market-making simulator, sweeping own and rival latency.
+- **Models:** queue-imbalance rule, logistic regression and LightGBM baselines; DeepLOB (61.6k params, 24.5M FLOPs per prediction) and a large MLP as teachers; a 4.6k-parameter MLP student (direct vs distilled). DeepLOB is small in parameters but slow: its LSTM runs 100 steps in sequence.
+- **Simulator (`code/sim/latency_sim.py`):** at each decision the model predicts the next mid move and pulls the quote about to be run over: +1 tick if right and in time, -c ticks if wrong and in time, 0 if the move came first. Time to the next move is taken from the data; an optional rival reacting after R us takes correct opportunities first. One lot, non-reactive replay, no queue position or fees: it shows the latency effect, not realistic PnL. hftbacktest remains an optional, more realistic check.
 - **Datasets:** FI-2010; free Nasdaq TotalView-ITCH 5.0 files for Dec 8-12 2025 (QQQ + two mid-liquidity stocks). See `data/README.md`.
-- **Evaluation metrics:** accuracy, macro-F1, information coefficient; measured inference latency (p50/p99); simulated PnL vs latency.
+- **Evaluation metrics:** accuracy, AUC, macro-F1; batch-1 inference latency (p50/p99, CPU and GPU); simulated ticks saved per 1,000 decisions vs total latency, with and without a rival.
 - **Challenges / modifications to the original:** unsmoothed labels (smoothed FI-2010-style labels leak future prices); chronological day-level splits; latency charged per model.
 
 ## 6. Reproduction Steps
@@ -57,7 +65,15 @@ pip install -r requirements.txt
 export HFT_DATA_DIR=/path/to/external/drive/hft_data      # ~50 GB free needed for the raw week
 bash code/run_pipeline.sh                                  # download, parse, rebuild books, features
 python code/models/baselines.py                            # linear + LightGBM baselines -> results/baselines/
+python code/data/book_events.py 2025-12-08 2025-12-09 2025-12-10 2025-12-11 2025-12-12   # event-time books (10 levels)
+python code/data/features_event.py 2025-12-08 2025-12-09 2025-12-10 2025-12-11 2025-12-12
+python code/models/latency.py --family torch && python code/models/latency.py --family lgbm
+python code/models/train_deeplob_itch.py                   # DeepLOB on Nasdaq (~4 h on an M1 Max GPU)
+python code/models/save_predictions.py --family trees && python code/models/save_predictions.py --family mlp
+python code/sim/latency_sim.py                             # -> results/sim/latency_sim.{json,png}
 ```
+
+DeepLOB on FI-2010: see [deeplob_reproduction/README.md](deeplob_reproduction/README.md).
 
 - **Compute requirements:** any recent laptop. Developed on an Apple M1 Max (64 GB RAM). Parsing is ~5 min per day; baselines take minutes; DeepLOB training ~2-4 h on the Apple GPU.
 
@@ -91,6 +107,26 @@ difference. The next mid change arrives a median 2–26 ms later for QQQ and NVD
 Write-up: [results/event_time_results.md](results/event_time_results.md).
 
 ![Learning curve](results/learning_curve.png)
+
+**Inference latency (2026-11-16)**, batch 1, Apple M1 Max (`results/latency/latency.json`): student MLP 0.011 ms,
+LightGBM ~0.027 ms (incl. Python call), large MLP 0.03 ms, DeepLOB 1.8-2.1 ms on one CPU thread and ~5 ms on the
+GPU one at a time; batched on the GPU DeepLOB is 0.19 ms per prediction, matching the paper's 0.253 ms. For 45% of
+QQQ decision rows the next mid change arrives within 2 ms, i.e. before DeepLOB's answer; for the student, 2%.
+
+**Latency simulator, first run (2026-11-16)** (`code/sim/latency_sim.py`; DeepLOB curves added once its Nasdaq
+run finishes). Ticks saved per 1,000 decisions against own infrastructure latency, each model's inference time
+included:
+
+![Latency simulator](results/sim/latency_sim.png)
+
+- (a) Against the market's clock alone, value decays steadily with latency: even a perfect predictor keeps only
+  ~66% of its value at 1 ms. At 10 us of infrastructure the student (0.657 accuracy, 10 us inference) beats the
+  more accurate LightGBM (0.663, 27 us): 455 vs 424 ticks per 1,000 decisions.
+- (b) Against a rival reacting 50 us after the same update, everything is decided by who is faster: below the
+  rival's speed a model keeps its full value; above it, correct pulls are worthless and wrong ones still cost.
+  LightGBM's extra 17 us of inference moves its cut-off point visibly to the left of the student's.
+- Assumptions: 1 lot, non-reactive replay, no queue position or fees, wrong pull costs 0.5 tick. It isolates the
+  latency effect; it is not a PnL estimate.
 
 ## 8. Conclusion
 

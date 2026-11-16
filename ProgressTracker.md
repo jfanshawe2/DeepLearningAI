@@ -28,3 +28,9 @@
 16/11: DeepLOB reproduction on FI-2010 Setup 2 (Table II): weighted F1 82.1 / 72.1 / 78.3 vs paper 83.4 / 72.8 / 80.4
   (k = 10 / 20 / 50), within 0.7-2.1 pts. Paper-size model (61.6k params), paper hyper-parameters, blind test days 8-10.
 - latency: DeepLOB 1.8-2.1 ms batch-1 on CPU vs 0.19 ms per sample batched on GPU (paper quotes 0.253 ms); student 0.01 ms.
+
+16/11 (evening): latency simulator (code/sim/latency_sim.py) + saved test predictions; first run: at 10 us
+  infrastructure the student (10 us inference) beats LightGBM (27 us) 455 vs 424 ticks per 1,000 decisions; with a
+  50 us rival, value is all-or-nothing on being faster. Project framing sharpened: value of speed depends on the
+  competitive environment, so results are curves vs total latency with and without a rival.
+- Nasdaq DeepLOB, FI-2010 seeds 1-2 and z-score runs queued overnight (code/run_overnight.sh).

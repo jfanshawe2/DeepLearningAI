@@ -8,8 +8,12 @@ in [free_hft_data.md](free_hft_data.md); references are in §11.
 
 ## 0. Goal and anchor paper
 
-**Claim to test:** a large order-book model is too slow to act on, and a small model distilled from it keeps
-most of its predictive value at a latency it can actually meet.
+**Claim to test:** a slow order-book model (DeepLOB: 61.6k params but ~2 ms per prediction on CPU) cannot act in
+time on a signal that resolves in milliseconds, and a fast student distilled from it keeps most of its value at a
+latency it can actually meet. **Sharpened 2026-11-16:** whether speed pays depends on the competitive environment
+(rivals' latency) and the strategy, so the deliverable is a set of curves against total latency, with and
+without a rival, not one PnL number. Setting: a software market maker on a CPU server near the exchange
+(no FPGA, no GPU on the decision path).
 
 **Anchor paper (course requirement):** DeepLOB, Zhang, Zohren & Roberts (2019), [arXiv 1808.03668](https://arxiv.org/abs/1808.03668).
 - **Result to reproduce:** DeepLOB's accuracy / precision / recall / F1 on the FI-2010 benchmark, Setup 2
@@ -125,19 +129,20 @@ Dropped: hint/feature matching (D3) and privileged inputs (D4), unless time allo
 
 ---
 
-## 6. Trading evaluation (hftbacktest)
+## 6. Trading evaluation
 
-- **Simulator:** [hftbacktest](https://github.com/nkaz001/hftbacktest) (free, MIT). It supports separate feed and
-  order latency and queue-position models, and replays L3 data. We write a converter from our ITCH event
-  parquet to its event format. Non-reactive replay with 1-lot orders: our orders don't move the market (stated as an assumption).
-- **Strategy:** a simple quoting rule shared by all models: quote both sides at the touch, skew or pull the side
-  the model predicts will be run over, and cap inventory. Only the predictor changes between runs.
-- **Latency:** total latency = feed + order latency (swept) + each model's **measured** inference time.
-- **Queue-position scenarios:** results are reported under assumed queue positions (back of queue,
-  hftbacktest's probabilistic power-law model, front 10%). A front-of-queue spot is what being fast buys at
-  a new price level, so this links back to latency. **Phrase it as a scenario:** "PnL under assumed queue
-  position X, which needs latency Y", never as achieved profit.
-- **Fees:** rebate / zero / taker-fee scenarios from the Nasdaq price list.
+**Primary (built 2026-11-16): simple latency simulator, `code/sim/latency_sim.py`.** At each decision row the
+model predicts the next mid move and the maker pulls the quote about to be run over:
++1 tick if correct and the pull lands before the move, -c ticks if wrong and in time, 0 if too late.
+- Pull lands at t + model inference latency (measured, batch 1) + own infrastructure latency (swept 1 us - 100 ms).
+- Deadline = time to the next mid change (from the data) or, with a rival reacting R us after the same update
+  with the same correct signal, min(next change, R).
+- DeepLOB hardware variants (H100 optimised ~0.1 ms, FPGA streaming ~2 us) use estimates, labelled as such.
+- Assumptions: 1 lot, non-reactive replay, no queue position or fees. Reported per 1,000 decisions.
+- Headline figure: ticks saved vs own latency, one curve per model, latency tiers marked, panel with a rival.
+
+**Optional, more realistic: hftbacktest** (L3 replay with queue-position models and separate feed/order
+latency; needs a converter from our ITCH parquet). Only if time allows.
 
 ---
 
