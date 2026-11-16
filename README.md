@@ -34,7 +34,8 @@ TODO: link to deployed demo and setup steps, if any.
 | `LICENSE` | MIT License |
 | `.gitignore` | Files ignored by Git |
 | `code/data/` | ITCH download, parser, order-book rebuild, features (`download_itch.py`, `itch_parse.py`, `book.py`, `features.py`, `select_symbols.py`) |
-| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve on both targets (`learning_curve.py`); DeepLOB and distillation to follow |
+| `deeplob_reproduction/` | **DeepLOB reproduction on FI-2010** (paper Table II): model, training script, results, figure, own README |
+| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve on both targets (`learning_curve.py`), batch-1 latency (`latency.py`); distillation to follow |
 | `code/analysis/` | Figures (`plot_baselines.py`, `plot_learning_curve.py`) |
 | `research/` | Literature notes and the implementation plan |
 | `Propsoal.md` | Initial project proposal (superseded by `research/implementation_plan.md`) |
@@ -61,6 +62,12 @@ python code/models/baselines.py                            # linear + LightGBM b
 - **Compute requirements:** any recent laptop. Developed on an Apple M1 Max (64 GB RAM). Parsing is ~5 min per day; baselines take minutes; DeepLOB training ~2-4 h on the Apple GPU.
 
 ## 7. Results / Insights
+
+**DeepLOB reproduction (2026-11-16).** FI-2010 Setup 2, weighted F1 82.1 / 72.1 / 78.3 vs the paper's
+83.4 / 72.8 / 80.4 at k = 10 / 20 / 50 (within 0.7-2.1 points). Details, gap analysis and run instructions:
+[deeplob_reproduction/README.md](deeplob_reproduction/README.md).
+
+![DeepLOB reproduction](deeplob_reproduction/results/fi2010_vs_paper.png)
 
 **Baselines (2026-11-03)**, pooled over QQQ, PYPL and NVDA, test day Dec 12 2025. Full write-up: [results/baseline_results.md](results/baseline_results.md).
 

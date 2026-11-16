@@ -52,7 +52,8 @@ def timeit(fn, n, warmup=200, sync=None):
 
 def bench_torch(n):
     import torch
-    from models.deeplob import DeepLOB
+    sys.path.insert(0, str(config.REPO / "deeplob_reproduction"))
+    from deeplob import DeepLOB
     from models.mlp import MLP, SIZES
 
     def mlp(size):

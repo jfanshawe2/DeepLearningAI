@@ -19,13 +19,15 @@ Metrics: accuracy and precision / recall / F1 both weighted-averaged and macro-a
 Table II has recall == accuracy for every row, which holds for the weighted average, so the weighted
 numbers are the ones comparable with the paper.
 
-    python code/models/train_fi2010.py --k 10
-    python code/models/train_fi2010.py --k 20 --max-epochs 3     # quick smoke test
+    python deeplob_reproduction/train_fi2010.py --k 10
+    python deeplob_reproduction/train_fi2010.py --k 20 --max-epochs 3     # quick smoke test
 
-Outputs: results/fi2010/deeplob_k<k>.json (metrics + per-epoch history); weights in $HFT_DATA_DIR/fi2010.
+Data directory: --data-dir, else $FI2010_DIR, else $HFT_DATA_DIR/fi2010 (default /Volumes/SeagateData/hft_data/fi2010).
+Outputs: deeplob_reproduction/results/deeplob_k<k>.json (metrics + per-epoch history); weights in the data dir.
 """
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -35,12 +37,13 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import config  # noqa: E402
-from models.deeplob import DeepLOB  # noqa: E402
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from deeplob import DeepLOB  # noqa: E402
 
-FI_DIR = config.DATA_DIR / "fi2010"
-OUT = config.RESULTS_DIR / "fi2010"
+FI_DIR = Path(os.environ.get("FI2010_DIR") or
+              Path(os.environ.get("HFT_DATA_DIR", "/Volumes/SeagateData/hft_data")) / "fi2010").expanduser()
+OUT = HERE / "results"
 LABEL_ROW = {10: -5, 20: -4, 30: -3, 50: -2, 100: -1}
 PAPER_TABLE2 = {10: dict(acc=84.47, precision=84.00, recall=84.47, f1=83.40),
                 20: dict(acc=74.85, precision=74.06, recall=74.85, f1=72.82),
@@ -98,15 +101,23 @@ def main():
     p.add_argument("--lr", type=float, default=0.01)
     p.add_argument("--variant", default="paper", choices=["paper", "repo"])
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--norm", default="DecPre", choices=["DecPre", "ZScore", "MinMax"],
+                   help="FI-2010 normalisation; the paper used ZScore (files named *_ZScore_CF_*)")
+    p.add_argument("--data-dir", default=None, help="folder with the FI-2010 .txt files")
+    p.add_argument("--threads", type=int, default=2, help="CPU threads (keep low to leave the machine usable)")
     args = p.parse_args()
+    global FI_DIR
+    if args.data_dir:
+        FI_DIR = Path(args.data_dir).expanduser()
+    torch.set_num_threads(args.threads)
     OUT.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     device = "mps" if torch.backends.mps.is_available() else "cpu"
 
     t0 = time.time()
-    Xtr_all, ytr_all = load_file("Train_Dst_NoAuction_DecPre_CF_7.txt")
-    tests = [load_file(f"Test_Dst_NoAuction_DecPre_CF_{i}.txt") for i in (7, 8, 9)]
+    Xtr_all, ytr_all = load_file(f"Train_Dst_NoAuction_{args.norm}_CF_7.txt")
+    tests = [load_file(f"Test_Dst_NoAuction_{args.norm}_CF_{i}.txt") for i in (7, 8, 9)]
     Xte = np.concatenate([x for x, _ in tests])
     yte = np.concatenate([y for _, y in tests])[:, LABEL_ROW[args.k]]
     cut = int(len(Xtr_all) * 0.8)
@@ -152,7 +163,8 @@ def main():
                best_val_acc=best_acc, test=metrics(tp, ty), paper=PAPER_TABLE2.get(args.k),
                test_class_balance=(np.bincount(ty, minlength=3) / len(ty)).tolist(),
                settings=vars(args), history=hist, minutes=(time.time() - t0) / 60)
-    tag = f"deeplob_k{args.k}" + ("" if args.variant == "paper" else f"_{args.variant}")
+    tag = (f"deeplob_k{args.k}" + ("" if args.variant == "paper" else f"_{args.variant}")
+           + ("" if args.norm == "DecPre" else f"_{args.norm.lower()}") + ("" if args.seed == 0 else f"_seed{args.seed}"))
     (OUT / f"{tag}.json").write_text(json.dumps(res, indent=1))
     torch.save(best_state, FI_DIR / f"{tag}.pt")
     w = res["test"]["weighted"]
