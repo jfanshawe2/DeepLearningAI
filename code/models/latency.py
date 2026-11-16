@@ -61,7 +61,8 @@ def bench_torch(n):
     models = {
         "mlp_small": (mlp("small"), (torch.randn(1, N_EVENT_FEATURES), torch.zeros(1, dtype=torch.long))),
         "mlp_large": (mlp("large"), (torch.randn(1, N_EVENT_FEATURES), torch.zeros(1, dtype=torch.long))),
-        "deeplob": (DeepLOB(n_out=3), (torch.randn(1, 1, 100, 40),)),
+        "deeplob": (DeepLOB(n_out=3, variant="paper"), (torch.randn(1, 1, 100, 40),)),          # ~60k, as published
+        "deeplob_repo": (DeepLOB(n_out=3, variant="repo"), (torch.randn(1, 1, 100, 40),)),     # ~144k, authors' notebook
     }
     res = {}
     for name, (m, x) in models.items():

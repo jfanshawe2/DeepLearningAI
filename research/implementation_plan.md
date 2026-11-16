@@ -12,8 +12,11 @@ in [free_hft_data.md](free_hft_data.md); references are in §11.
 most of its predictive value at a latency it can actually meet.
 
 **Anchor paper (course requirement):** DeepLOB, Zhang, Zohren & Roberts (2019), [arXiv 1808.03668](https://arxiv.org/abs/1808.03668).
-- **Result to reproduce:** DeepLOB's accuracy / macro-F1 on the FI-2010 benchmark (Setup 2, horizons k = 10, 50, 100),
-  as in the paper's FI-2010 results table. FI-2010 is free and small, so this is about a week of work and is
+- **Result to reproduce:** DeepLOB's accuracy / precision / recall / F1 on the FI-2010 benchmark, Setup 2
+  (train days 1-7, test days 8-10), horizons k = 10, 20, 50: paper Table II, F1 83.40 / 72.82 / 80.35 %.
+  (k = 10, 50, 100 are the Setup 1 horizons, Table I.) Paper model: conv 16 filters, Inception@32, LSTM 64,
+  ~60k params; Adam lr 0.01, epsilon 1, batch 32, stop after 20 epochs without validation-accuracy gain.
+  Paper uses the z-score FI-2010 files; ours are the decimal-precision files from the authors' repo. FI-2010 is free and small, so this is about a week of work and is
   the project's fallback if the market-making extension slips.
 - **Our extension:** (1) re-run the DeepLOB setup on our own Nasdaq ITCH data, pooled across stocks;
   (2) distil it into a cache-sized student; (3) measure each model's inference latency; (4) show how much of

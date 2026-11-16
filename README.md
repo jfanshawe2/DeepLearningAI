@@ -17,9 +17,9 @@ TODO: link to deployed demo and setup steps, if any.
 
 ## 3. Chosen Result
 
-- **Result targeted for reproduction:** DeepLOB accuracy and macro-F1 on FI-2010 for prediction horizons k = 10, 50, 100.
+- **Result targeted for reproduction:** DeepLOB accuracy / precision / recall / F1 on FI-2010, Setup 2 (train days 1-7, test days 8-10), prediction horizons k = 10, 20, 50. Paper F1: 83.40 / 72.82 / 80.35 %.
 - **Why it matters:** it is the paper's headline evidence that a deep model on raw book data beats feature-based models; our extension asks whether that advantage still holds on recent Nasdaq data, against strong tree baselines, and after latency is charged.
-- **Reference in original paper:** FI-2010 results table (TODO: confirm table number from the paper).
+- **Reference in original paper:** Table II (Setup 2). Table I (Setup 1, anchored 9-fold, k = 10, 50, 100) is a possible second target; Table III reports DeepLOB's forward time (0.253 ms, GPU).
 
 ## 4. GitHub Contents
 
