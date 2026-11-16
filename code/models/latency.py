@@ -86,6 +86,11 @@ def bench_torch(n):
             xg = tuple(t.to("mps") for t in x)
             with torch.inference_mode():
                 r["mps_batch1"] = timeit(lambda: mg(*xg), n // 5, warmup=50, sync=torch.mps.synchronize)
+                # Throughput view (how a per-prediction "forward time" like DeepLOB's Table III can arise):
+                # one call on a batch of 32, divided by 32. Not usable live: filling the batch means waiting.
+                xb = tuple(t.repeat(32, *[1] * (t.dim() - 1)) for t in xg)
+                b = timeit(lambda: mg(*xb), n // 10, warmup=20, sync=torch.mps.synchronize)
+                r["mps_batch32_per_sample"] = {k_: (v / 32 if k_ != "n" else v) for k_, v in b.items()}
             m.to("cpu")
         res[name] = r
         print(f"{name:10s} {params:>8,} params {r['mflops']:8.2f} MFLOPs | CPU1 eager p50 "
