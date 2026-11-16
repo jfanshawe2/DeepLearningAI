@@ -24,3 +24,7 @@
 - design decision: teacher and student get the same information (teacher = raw event window, student = summary
   features of the same window); cross-asset features go to both; privileged-info teacher only as a side ablation.
   Next: DeepLOB on FI-2010, DeepLOB on event-time ITCH, cross-asset features for all models, distillation, latency
+
+16/11: DeepLOB reproduction on FI-2010 Setup 2 (Table II): weighted F1 82.1 / 72.1 / 78.3 vs paper 83.4 / 72.8 / 80.4
+  (k = 10 / 20 / 50), within 0.7-2.1 pts. Paper-size model (61.6k params), paper hyper-parameters, blind test days 8-10.
+- latency: DeepLOB 1.8-2.1 ms batch-1 on CPU vs 0.19 ms per sample batched on GPU (paper quotes 0.253 ms); student 0.01 ms.
