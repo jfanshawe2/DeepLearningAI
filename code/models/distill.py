@@ -1,7 +1,7 @@
 """Distil slow teachers into the 4.6k-parameter MLP (soft-label KD, Hinton et al. 2015; plan item D1).
 
 Same rows, label and split as the event-time results: train Dec 8-10, validate Dec 11, test Dec 12.
-The student is the small MLP of mlp.py (33 features + 4-d symbol embedding -> 64 -> 32 -> 2, 4,610 params).
+The student is the small MLP of mlp.py (34 features + 4-d symbol embedding -> 64 -> 32 -> 2, 4,654 params).
 
 Target per training row:   alpha * onehot(y_next) + (1 - alpha) * [1 - p_teacher, p_teacher]
 with soft cross-entropy. alpha = 1 is the direct (no-teacher) baseline. Early stopping always uses the

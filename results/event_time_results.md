@@ -15,7 +15,7 @@ The 100 ms / 1 s baselines tied at ~0.53 macro-F1 with no gap between small and 
 |---|---|---|
 | Rows | every 100 ms | every best bid/ask change (last per timestamp), thinned evenly to ≤300k per stock-day |
 | Label | mid change over next 1 s: down / flat / up | direction of the **next** mid change: down / up (no flat class, no horizon to pick) |
-| Features | 31, windows 0.1 s – 5 min | 33, same families, windows 10 ms – 60 s (event-level order-flow imbalance, time since last move, update intensity) |
+| Features | 31, windows 0.1 s – 5 min | 34, same families, windows 10 ms – 60 s (event-level order-flow imbalance, time since last move, update intensity) |
 | Balance (test) | 0.33 / 0.36 / 0.31 | 0.50 up |
 
 The next mid change comes fast: median 2–26 ms for QQQ and NVDA, 16–208 ms for PYPL. **This signal only

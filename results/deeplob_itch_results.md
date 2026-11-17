@@ -18,9 +18,9 @@
 | Model | Input | Accuracy | AUC | Log-loss | Batch-1 inference (CPU) |
 |---|---|---|---|---|---|
 | Queue-imbalance rule | 1 feature | 0.626 | – | – | ~0.5 us |
-| Logistic regression | 33 features | 0.638 | 0.689 | 0.638 | ~1 us |
-| Small MLP, direct (4.6k) | 33 features | 0.657 | 0.721 | 0.613 | 10 us |
-| LightGBM | 33 features | 0.663 | **0.728** | **0.608** | 27 us |
+| Logistic regression | 34 features | 0.638 | 0.689 | 0.638 | ~1 us |
+| Small MLP, direct (4.6k) | 34 features | 0.657 | 0.721 | 0.613 | 10 us |
+| LightGBM | 34 features | 0.663 | **0.728** | **0.608** | 27 us |
 | **DeepLOB** (61.6k) | raw 100 x 40 book | **0.663** | 0.726 | 0.611 | **1,764 us** |
 | Average of DeepLOB and LightGBM | both | 0.671 | 0.738 | – | – |
 

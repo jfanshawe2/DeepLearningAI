@@ -39,3 +39,8 @@
   228 vs 455 ticks/1k decisions. Distillation: small MLP + LightGBM soft labels 0.657 -> 0.662 (3 seeds), best CPU
   model in the simulator up to ~1 ms; DeepLOB teacher helps little (its edge is not expressible from the student's
   features). Next: student with raw-window inputs to carry DeepLOB's edge; FI-2010 seeds and z-score overnight.
+
+17/11: raw-window students (last 10 updates x top 5 levels + features): distilled tiny conv (8.4k params) 0.665
+  test acc > LightGBM 0.663 = DeepLOB 0.663; with raw inputs the DeepLOB+LightGBM teacher becomes the best one. In
+  PyTorch its 22 us costs more than the gain at co-located speeds; C implementation next. Feature count corrected
+  to 34. z-score FI-2010 files downloaded and verified; FI-2010 seed 1: F1 81.9 / 73.0 (k=10/20).

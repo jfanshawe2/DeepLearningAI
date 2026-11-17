@@ -2,7 +2,7 @@
 
 Deployment assumed: a software trader on a CPU server near the exchange, no GPU on the decision path
 (batch-1 GPU inference is measured here and is slower) and no FPGA. Feature computation is not timed:
-the student's ~33 features are O(1) incremental updates per book event, taken as negligible next to
+the student's 34 features are O(1) incremental updates per book event, taken as negligible next to
 model inference (stated as an assumption).
 
 Latency does not depend on weight values, so the torch models use random initialisation with the
@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config  # noqa: E402
 
 OUT = config.RESULTS_DIR / "latency"
-N_EVENT_FEATURES = 33   # event-time feature set (features_event.py), excluding sym
+N_EVENT_FEATURES = 34   # event-time feature set (features_event.py), excluding sym
 LGBM_TREES = 386        # best_iter of the 3-day event-time LightGBM (results/learning_curve/event.json)
 
 
@@ -50,11 +50,12 @@ def timeit(fn, n, warmup=200, sync=None):
                 p999=float(np.percentile(t, 99.9)), mean=float(t.mean()), n=n)
 
 
-def bench_torch(n):
+def bench_torch(n, only=None, cpu_only=False):
     import torch
     sys.path.insert(0, str(config.REPO / "deeplob_reproduction"))
     from deeplob import DeepLOB
     from models.mlp import MLP, SIZES
+    from models.students import STUDENTS, K, L
 
     def mlp(size):
         return MLP(N_EVENT_FEATURES, SIZES[size], n_sym=3, dropout=0.0, n_out=2)
@@ -65,8 +66,13 @@ def bench_torch(n):
         "deeplob": (DeepLOB(n_out=3, variant="paper"), (torch.randn(1, 1, 100, 40),)),          # ~60k, as published
         "deeplob_repo": (DeepLOB(n_out=3, variant="repo"), (torch.randn(1, 1, 100, 40),)),     # ~144k, authors' notebook
     }
+    for name, cls in STUDENTS.items():  # students with a raw-book window (students.py)
+        models[f"student_{name}"] = (cls(N_EVENT_FEATURES, 3), (torch.randn(1, N_EVENT_FEATURES),
+                                                                torch.randn(1, K, 4 * L), torch.zeros(1, dtype=torch.long)))
     res = {}
     for name, (m, x) in models.items():
+        if only and name not in only:
+            continue
         m.eval()
         params = sum(p.numel() for p in m.parameters())
         from torch.utils.flop_counter import FlopCounterMode
@@ -82,7 +88,7 @@ def bench_torch(n):
         torch.set_num_threads(8)
         with torch.inference_mode():
             r["cpu8_eager"] = timeit(lambda: m(*x), n // 2)
-        if torch.backends.mps.is_available():
+        if torch.backends.mps.is_available() and not cpu_only:
             mg = m.to("mps")
             xg = tuple(t.to("mps") for t in x)
             with torch.inference_mode():
@@ -125,11 +131,15 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--family", choices=["torch", "lgbm"], required=True)
     p.add_argument("--n", type=int, default=5000, help="timed predictions per configuration")
+    p.add_argument("--only", nargs="+", default=None, help="torch models to (re)measure; others keep old numbers")
+    p.add_argument("--cpu-only", action="store_true", help="skip the GPU measurements")
     args = p.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / "latency.json"
     res = json.loads(path.read_text()) if path.exists() else {}
-    res.update(bench_torch(args.n) if args.family == "torch" else bench_lgbm(args.n))
+    new = bench_torch(args.n, args.only, args.cpu_only) if args.family == "torch" else bench_lgbm(args.n)
+    for k, v in new.items():  # merge per model, so a CPU-only re-run keeps earlier GPU numbers
+        res.setdefault(k, {}).update(v)
     res["_machine"] = dict(cpu=platform.processor() or platform.machine(), python=platform.python_version(),
                            note="Apple M1 Max, 64 GB, macOS; development numbers, not a Linux trading server")
     path.write_text(json.dumps(res, indent=1))

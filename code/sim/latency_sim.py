@@ -54,6 +54,8 @@ def model_latency_ms():
         "mlp_large": lat["mlp_large"]["cpu1_torchscript"]["p50"] / 1e3,
         "lgbm": lat["lgbm"]["cpu1_python_predict"]["p50"] / 1e3,
         "deeplob": lat["deeplob"]["cpu1_eager"]["p50"] / 1e3,
+        "student_raw_mlp": lat["student_raw_mlp"]["cpu1_torchscript"]["p50"] / 1e3,
+        "student_raw_conv": lat["student_raw_conv"]["cpu1_torchscript"]["p50"] / 1e3,
         "logreg": 0.001,      # 34-term dot product: ~1 us, assumed
         "rule_qi": 0.0005,    # one ratio: assumed
     }
@@ -110,7 +112,24 @@ def main():
         series.append(("deeplob", "deeplob", lat["deeplob"], AQUA, "-", "DeepLOB (CPU, measured)"))
         series.append(("deeplob_h100", "deeplob", 0.1, AQUA, "--", "DeepLOB (H100 optimised, est. 0.1 ms)"))
         series.append(("deeplob_fpga", "deeplob", 0.002, AQUA, ":", "DeepLOB (FPGA streaming, est. 2 us)"))
-    others = [k for k in ("mlp_large", "logreg", "rule_qi") if k in preds]
+    # raw-window students (distill_raw.py): per architecture, the variant with the lowest mean VALIDATION loss
+    YELLOW = "#eda100"
+    raw_metrics = config.RESULTS_DIR / "distill_raw" / "metrics.json"
+    if raw_metrics.exists():
+        rm = json.loads(raw_metrics.read_text())
+        for arch, col, label in (("raw_conv", YELLOW, "Tiny conv 8.4k + raw window, distilled (CPU, measured)"),
+                                 ("raw_mlp", None, None)):
+            cands = {k: np.mean([r["val_loss"] for r in v["runs"]]) for k, v in rm.items() if v["arch"] == arch}
+            best = min(cands, key=cands.get)
+            key = f"student_{arch}_{best.removeprefix(arch + '_')}"
+            if key in preds:
+                lat_ms = lat[f"student_{arch}"]
+                if col:  # plotted
+                    series.append((f"student_{arch}", key, lat_ms, col, "-", label))
+                else:    # kept in the JSON only, to keep the figure readable
+                    preds[f"student_{arch}"] = preds[key]
+                    lat[f"student_{arch}"] = lat_ms
+    others = [k for k in ("student_raw_mlp", "mlp_large", "logreg", "rule_qi") if k in preds]
 
     res = dict(assumptions=dict(cost_ticks_per_wrong_pull=args.cost, rival_us=args.rival_us,
                                 threshold=args.threshold, unit="ticks per 1,000 decisions",
@@ -169,7 +188,7 @@ def plot(res, series, args):
             ax.spines[s].set_visible(False)
         ax.tick_params(colors=MUTED, length=0)
     axes[0].set_ylabel("Ticks saved per 1,000 decisions", color=MUTED)
-    axes[0].legend(frameon=False, fontsize=7.5, loc="lower left")
+    axes[1].legend(frameon=False, fontsize=7.5, loc="center right")  # empty region of panel (b)
     fig.text(0.01, 0.005, f"Each model's measured (or estimated) inference time is added to the x value. Wrong pull "
              f"costs {args.cost:g} tick. 1 lot, non-reactive replay, no queue position or fees. Test day Dec 12 2025, "
              "QQQ / PYPL / NVDA.", fontsize=7, color=MUTED)

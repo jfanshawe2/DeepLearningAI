@@ -40,7 +40,7 @@ TODO: link to deployed demo and setup steps, if any.
 | `.gitignore` | Files ignored by Git |
 | `code/data/` | ITCH download, parser, order-book rebuild, features (`download_itch.py`, `itch_parse.py`, `book.py`, `features.py`, `select_symbols.py`) |
 | `deeplob_reproduction/` | **DeepLOB reproduction on FI-2010** (paper Table II): model, training script, results, figure, own README |
-| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve (`learning_curve.py`), batch-1 latency (`latency.py`), DeepLOB on Nasdaq (`train_deeplob_itch.py`), saved test predictions (`save_predictions.py`), distillation (`distill.py`) |
+| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve (`learning_curve.py`), batch-1 latency (`latency.py`), DeepLOB on Nasdaq (`train_deeplob_itch.py`), saved test predictions (`save_predictions.py`), distillation (`distill.py`), raw-window students (`students.py`, `distill_raw.py`) |
 | `code/sim/` | Latency-aware market-making simulator (`latency_sim.py`) |
 | `code/run_overnight.sh` | Low-priority queue for the long GPU runs |
 | `code/analysis/` | Figures (`plot_baselines.py`, `plot_learning_curve.py`) |
@@ -71,6 +71,7 @@ python code/models/latency.py --family torch && python code/models/latency.py --
 python code/models/train_deeplob_itch.py                   # DeepLOB on Nasdaq (~4 h on an M1 Max GPU)
 python code/models/save_predictions.py --family trees && python code/models/save_predictions.py --family mlp
 python code/models/distill.py --stage teacher_lgbm && python code/models/distill.py --stage distill
+python code/models/distill_raw.py --stage build && python code/models/distill_raw.py --stage train
 python code/sim/latency_sim.py                             # -> results/sim/latency_sim.{json,png}
 ```
 
@@ -129,6 +130,12 @@ LightGBM at 10 us instead of 27 us; in the simulator it becomes the best CPU mod
 ~1 ms. DeepLOB as teacher helps far less (0.658): its edge comes from raw-book patterns the student's features
 cannot express, so the most accurate teacher is not the most useful one. Write-up:
 [results/distill_results.md](results/distill_results.md).
+
+**Students with a raw-book window (2026-11-17).** Giving the student the last 10 book updates (top 5 levels) as
+well as the features lets it absorb DeepLOB's edge: a distilled 8.4k-parameter tiny conv reaches 0.665 test
+accuracy, above both LightGBM (0.663) and DeepLOB (0.663), and the DeepLOB + LightGBM teacher, worst for the
+features-only student, becomes the best. In PyTorch its 22 us inference still costs more than the accuracy
+gains at co-located speeds; a C implementation (all students need < 0.03 MFLOPs) is the next step.
 
 ## 8. Conclusion
 
