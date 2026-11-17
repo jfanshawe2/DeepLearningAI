@@ -113,20 +113,14 @@ LightGBM ~0.027 ms (incl. Python call), large MLP 0.03 ms, DeepLOB 1.8-2.1 ms on
 GPU one at a time; batched on the GPU DeepLOB is 0.19 ms per prediction, matching the paper's 0.253 ms. For 45% of
 QQQ decision rows the next mid change arrives within 2 ms, i.e. before DeepLOB's answer; for the student, 2%.
 
-**Latency simulator, first run (2026-11-16)** (`code/sim/latency_sim.py`; DeepLOB curves added once its Nasdaq
-run finishes). Ticks saved per 1,000 decisions against own infrastructure latency, each model's inference time
-included:
+**DeepLOB on Nasdaq + latency simulator (2026-11-16).** On the test day DeepLOB (raw book) reaches 0.663
+accuracy, tying LightGBM (0.663, hand-made features) and beating the small MLP (0.657) by 0.66 points
+[95% CI +0.50, +0.82]; averaging DeepLOB and LightGBM gives 0.671. But charged its 1.76 ms CPU inference in the
+simulator, DeepLOB keeps about half the small MLP's value at co-located speeds (228 vs 455 ticks saved per 1,000
+decisions at 10 us own latency); only FPGA-class inference (estimated) would let its edge pay. Write-up:
+[results/deeplob_itch_results.md](results/deeplob_itch_results.md).
 
 ![Latency simulator](results/sim/latency_sim.png)
-
-- (a) Against the market's clock alone, value decays steadily with latency: even a perfect predictor keeps only
-  ~66% of its value at 1 ms. At 10 us of infrastructure the student (0.657 accuracy, 10 us inference) beats the
-  more accurate LightGBM (0.663, 27 us): 455 vs 424 ticks per 1,000 decisions.
-- (b) Against a rival reacting 50 us after the same update, everything is decided by who is faster: below the
-  rival's speed a model keeps its full value; above it, correct pulls are worthless and wrong ones still cost.
-  LightGBM's extra 17 us of inference moves its cut-off point visibly to the left of the student's.
-- Assumptions: 1 lot, non-reactive replay, no queue position or fees, wrong pull costs 0.5 tick. It isolates the
-  latency effect; it is not a PnL estimate.
 
 ## 8. Conclusion
 

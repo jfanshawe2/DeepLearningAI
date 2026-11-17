@@ -100,7 +100,7 @@ def main():
     # (name, prediction key, inference latency ms, colour, style, label)
     series = [("oracle", None, 0.0, GREY, "--", "Perfect predictor, zero inference time")]
     if "mlp_small" in preds:
-        series.append(("mlp_small", "mlp_small", lat["mlp_small"], BLUE, "-", "Student MLP 4.6k (CPU, measured)"))
+        series.append(("mlp_small", "mlp_small", lat["mlp_small"], BLUE, "-", "Small MLP 4.6k, direct (CPU, measured)"))
     if "lgbm" in preds:
         series.append(("lgbm", "lgbm", lat["lgbm"], ORANGE, "-", "LightGBM (CPU, measured)"))
     if "deeplob" in preds:
