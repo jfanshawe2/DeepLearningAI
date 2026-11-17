@@ -40,7 +40,7 @@ TODO: link to deployed demo and setup steps, if any.
 | `.gitignore` | Files ignored by Git |
 | `code/data/` | ITCH download, parser, order-book rebuild, features (`download_itch.py`, `itch_parse.py`, `book.py`, `features.py`, `select_symbols.py`) |
 | `deeplob_reproduction/` | **DeepLOB reproduction on FI-2010** (paper Table II): model, training script, results, figure, own README |
-| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve (`learning_curve.py`), batch-1 latency (`latency.py`), DeepLOB on Nasdaq (`train_deeplob_itch.py`), saved test predictions (`save_predictions.py`); distillation to follow |
+| `code/models/` | Baselines (`baselines.py`), MLPs (`mlp.py`), learning curve (`learning_curve.py`), batch-1 latency (`latency.py`), DeepLOB on Nasdaq (`train_deeplob_itch.py`), saved test predictions (`save_predictions.py`), distillation (`distill.py`) |
 | `code/sim/` | Latency-aware market-making simulator (`latency_sim.py`) |
 | `code/run_overnight.sh` | Low-priority queue for the long GPU runs |
 | `code/analysis/` | Figures (`plot_baselines.py`, `plot_learning_curve.py`) |
@@ -70,6 +70,7 @@ python code/data/features_event.py 2025-12-08 2025-12-09 2025-12-10 2025-12-11 2
 python code/models/latency.py --family torch && python code/models/latency.py --family lgbm
 python code/models/train_deeplob_itch.py                   # DeepLOB on Nasdaq (~4 h on an M1 Max GPU)
 python code/models/save_predictions.py --family trees && python code/models/save_predictions.py --family mlp
+python code/models/distill.py --stage teacher_lgbm && python code/models/distill.py --stage distill
 python code/sim/latency_sim.py                             # -> results/sim/latency_sim.{json,png}
 ```
 
@@ -121,6 +122,13 @@ decisions at 10 us own latency); only FPGA-class inference (estimated) would let
 [results/deeplob_itch_results.md](results/deeplob_itch_results.md).
 
 ![Latency simulator](results/sim/latency_sim.png)
+
+**Distillation (2026-11-16).** Training the same 4.6k-parameter MLP on LightGBM's (cross-fitted) soft labels
+lifts it from 0.657 to 0.662 test accuracy (3 seeds, ranges do not overlap), closing ~80% of the gap to
+LightGBM at 10 us instead of 27 us; in the simulator it becomes the best CPU model at every own latency up to
+~1 ms. DeepLOB as teacher helps far less (0.658): its edge comes from raw-book patterns the student's features
+cannot express, so the most accurate teacher is not the most useful one. Write-up:
+[results/distill_results.md](results/distill_results.md).
 
 ## 8. Conclusion
 

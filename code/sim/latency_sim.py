@@ -100,7 +100,10 @@ def main():
     # (name, prediction key, inference latency ms, colour, style, label)
     series = [("oracle", None, 0.0, GREY, "--", "Perfect predictor, zero inference time")]
     if "mlp_small" in preds:
-        series.append(("mlp_small", "mlp_small", lat["mlp_small"], BLUE, "-", "Small MLP 4.6k, direct (CPU, measured)"))
+        series.append(("mlp_small", "mlp_small", lat["mlp_small"], BLUE, "--", "Small MLP 4.6k, direct (CPU, measured)"))
+    if "mlp_small_kd_lgbm_a0.5" in preds:  # same 4.6k network, trained on LightGBM's soft labels (distill.py)
+        series.append(("mlp_small_kd", "mlp_small_kd_lgbm_a0.5", lat["mlp_small"], BLUE, "-",
+                       "Small MLP 4.6k, distilled (CPU, measured)"))
     if "lgbm" in preds:
         series.append(("lgbm", "lgbm", lat["lgbm"], ORANGE, "-", "LightGBM (CPU, measured)"))
     if "deeplob" in preds:

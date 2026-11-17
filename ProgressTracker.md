@@ -34,3 +34,8 @@
   50 us rival, value is all-or-nothing on being faster. Project framing sharpened: value of speed depends on the
   competitive environment, so results are curves vs total latency with and without a rival.
 - Nasdaq DeepLOB, FI-2010 seeds 1-2 and z-score runs queued overnight (code/run_overnight.sh).
+
+16/11 (night): DeepLOB on Nasdaq test acc 0.663 (= LightGBM, +0.66 pts over small MLP); charged 1.76 ms it saves
+  228 vs 455 ticks/1k decisions. Distillation: small MLP + LightGBM soft labels 0.657 -> 0.662 (3 seeds), best CPU
+  model in the simulator up to ~1 ms; DeepLOB teacher helps little (its edge is not expressible from the student's
+  features). Next: student with raw-window inputs to carry DeepLOB's edge; FI-2010 seeds and z-score overnight.
