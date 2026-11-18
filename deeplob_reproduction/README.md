@@ -23,18 +23,23 @@ method, it transferred to London stocks it never saw, and the paper argues it is
 
 ![Reproduction vs paper](results/fi2010_vs_paper.png)
 
-| k | | Accuracy | Precision | Recall | F1 (weighted) | F1 (macro) |
-|---|---|---|---|---|---|---|
-| 10 | Paper | 84.47 | 84.00 | 84.47 | 83.40 | – |
-| 10 | **Ours** | **83.06** | 82.17 | 83.06 | **82.10** | 72.13 |
-| 20 | Paper | 74.85 | 74.06 | 74.85 | 72.82 | – |
-| 20 | **Ours** | **73.73** | 72.38 | 73.73 | **72.11** | 63.61 |
-| 50 | Paper | 80.51 | 80.38 | 80.51 | 80.35 | – |
-| 50 | **Ours** | **78.38** | 78.33 | 78.38 | **78.32** | 76.74 |
+| k | | Accuracy | F1 (weighted) | F1 (macro) |
+|---|---|---|---|---|
+| 10 | Paper | 84.47 | 83.40 | – |
+| 10 | **Ours, 3 seeds (decimal precision)** | **83.07** [82.95, 83.22] | **82.08** [81.93, 82.21] | 72.09 |
+| 10 | Ours, z-score files (seed 0) | 83.44 | 82.34 | 72.35 |
+| 20 | Paper | 74.85 | 72.82 | – |
+| 20 | **Ours, 3 seeds (decimal precision)** | **74.08** [73.73, 74.65] | **72.38** [72.00, 73.02] | 63.92 |
+| 20 | Ours, z-score files (seed 0) | 74.70 | 72.88 | 64.33 |
+| 50 | Paper | 80.51 | 80.35 | – |
+| 50 | **Ours, 3 seeds (decimal precision)** | **78.75** [78.38, 79.11] | **78.62** [78.32, 78.86] | 77.03 |
+| 50 | Ours, z-score files | interrupted at epoch 21; to re-run | | |
 
-Single seed (0), decimal-precision files. **Reproduced within 0.7-2.1 F1 points at every horizon**,
-including the paper's non-monotone pattern (k = 20 is the hardest). Best epoch 34 / 36 / 26, stopped at
-55 / 57 / 47 (paper: "about 100 epochs"). Test class balance (down / stationary / up): k=10
+Mean [min, max] over seeds 0-2. Paper precision / recall per seed are in `results/*.json`.
+**Reproduced within 0.4-1.7 weighted-F1 points on average**, including the paper's non-monotone pattern
+(k = 20 is the hardest); one k = 20 seed (73.02) exceeds the paper. With the paper's z-score normalisation the
+gap narrows further (k = 10: 82.34 vs 83.40; k = 20: 72.88 vs 72.82, matching the paper). Seed 0 stopped at
+55 / 57 / 47 epochs (paper: "about 100"). Test class balance (down / stationary / up): k=10
 0.15 / 0.71 / 0.14, k=20 0.20 / 0.62 / 0.18, k=50 0.28 / 0.47 / 0.25.
 
 ### Latency: the paper's 0.253 ms vs what a trader gets
@@ -57,8 +62,8 @@ change for QQQ in our Nasdaq data. Batch-1 latency on an NVIDIA GPU is still to 
 
 | Possible cause | Detail | Expected effect |
 |---|---|---|
-| Normalisation | Paper used the z-score FI-2010 files; we used decimal precision (the version the authors' repo ships). Paper: "subtle difference". | Small; being tested (`--norm ZScore`) |
-| Single seed | One run per horizon; DeepLOB results vary between seeds. | Being tested (3 seeds) |
+| Normalisation | Paper used the z-score FI-2010 files; our main runs use decimal precision (the version the authors' repo ships). Paper: "subtle difference". | **Tested:** z-score is +0.26 (k=10) and +0.50 (k=20) F1 above the decimal-precision mean; at k=20 it matches the paper |
+| Seed variation | DeepLOB results vary between runs. | **Tested:** seed range 0.3-1.0 F1 points; does not explain the k=10 and k=50 gaps on its own |
 | Validation split | Paper does not say where its FI-2010 validation set comes from. We follow the authors' code: last 20% of days 1-7 held out, so we train on 80% of the training data. | Slightly lower |
 | Framework defaults | Paper used Keras/TensorFlow; we use PyTorch (weight initialisation, BatchNorm momentum and epsilon, Adam epsilon semantics differ). | Small, unknown sign |
 | Architecture details | The paper's text says Leaky-ReLU everywhere; the authors' code uses tanh in the second conv block (we follow the code). Paper says zero padding on every conv; we pad the time axis only. | Small |

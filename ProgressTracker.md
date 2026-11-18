@@ -44,3 +44,6 @@
   test acc > LightGBM 0.663 = DeepLOB 0.663; with raw inputs the DeepLOB+LightGBM teacher becomes the best one. In
   PyTorch its 22 us costs more than the gain at co-located speeds; C implementation next. Feature count corrected
   to 34. z-score FI-2010 files downloaded and verified; FI-2010 seed 1: F1 81.9 / 73.0 (k=10/20).
+
+18/11: FI-2010 seeds 1-2 done: weighted F1 mean 82.08 / 72.38 / 78.62 (3 seeds) vs paper 83.40 / 72.82 / 80.35.
+  z-score files: 82.34 (k=10), 72.88 (k=20, matches paper); k=50 z-score run interrupted at epoch 21, to re-run.

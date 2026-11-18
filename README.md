@@ -81,8 +81,8 @@ DeepLOB on FI-2010: see [deeplob_reproduction/README.md](deeplob_reproduction/RE
 
 ## 7. Results / Insights
 
-**DeepLOB reproduction (2026-11-16).** FI-2010 Setup 2, weighted F1 82.1 / 72.1 / 78.3 vs the paper's
-83.4 / 72.8 / 80.4 at k = 10 / 20 / 50 (within 0.7-2.1 points). Details, gap analysis and run instructions:
+**DeepLOB reproduction (2026-11-16/18).** FI-2010 Setup 2, weighted F1 82.1 / 72.4 / 78.6 (mean of 3 seeds) vs
+the paper's 83.4 / 72.8 / 80.4 at k = 10 / 20 / 50; with the paper's z-score files 82.3 / 72.9 (k = 50 to re-run). Details, gap analysis and run instructions:
 [deeplob_reproduction/README.md](deeplob_reproduction/README.md).
 
 ![DeepLOB reproduction](deeplob_reproduction/results/fi2010_vs_paper.png)
